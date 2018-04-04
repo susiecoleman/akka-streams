@@ -9,15 +9,17 @@ import scala.concurrent.duration._
 
 object AkkaExamples {
 
+  // Sources emit. They are blueprints of what you want to run. They can be reused
+  val source: Source[Int, NotUsed] = Source(1 to 100)
+
   def basicExample(): Unit = {
     implicit val system: ActorSystem = ActorSystem("basicExample")
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-    val source: Source[Int, NotUsed] = Source(1 to 100)
-    val done: Future[Done] = source.runForeach(i ⇒ println(i))
+    val result: Future[Done] = source.runForeach(i ⇒ println(i))
 
-    done.onComplete(_ ⇒ system.terminate())
+    result.onComplete(_ ⇒ system.terminate())
   }
 
   def factorials(): Unit = {
@@ -26,12 +28,11 @@ object AkkaExamples {
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-    val source: Source[Int, NotUsed] = Source(1 to 100)
     val factorials = source.scan(BigInt(1))((acc, next) ⇒ acc * next)
     val result: Future[IOResult] =
       factorials
         .map(num ⇒ ByteString(s"$num\n"))
-        .runWith(FileIO.toPath(Paths.get("factorials.txt")))
+        .runWith(FileIO.toPath(Paths.get("factorials.txt"))) // runWith is passed a Sink which is where a stream terminates
 
     result.map(x => println(x.count))
 
@@ -69,14 +70,19 @@ object AkkaExamples {
     result.onComplete(_ ⇒ system.terminate())
   }
 
+  def flows = {
+    val flow = Flow[Int].map(_*2)
+    val sink = flow.to(Sink.foreach(println))
+  }
+
   def throttle(): Unit = {
     implicit val system: ActorSystem = ActorSystem("basicExample")
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-    val source: Future[Done] = Source(1 to 100).throttle(1, 1.second, 1, ThrottleMode.Shaping).runForeach(println)
+    val result: Future[Done] = source.throttle(1, 1.second, 1, ThrottleMode.Shaping).runForeach(println)
 
-    source.onComplete(_ ⇒ system.terminate())
+    result.onComplete(_ ⇒ system.terminate())
   }
 
   def buffer(): Unit = {
@@ -84,12 +90,12 @@ object AkkaExamples {
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-    val source: Future[Done] = Source(1 to 100).buffer(2, OverflowStrategy.dropBuffer).runForeach{ x =>
+    val result: Future[Done] = source.buffer(2, OverflowStrategy.dropBuffer).runForeach{ x =>
       Thread.sleep(10000)
       println(x)
     }
 
-    source.onComplete(_ ⇒ system.terminate())
+    result.onComplete(_ ⇒ system.terminate())
   }
 
   def graph: NotUsed = {
@@ -97,7 +103,6 @@ object AkkaExamples {
     implicit val system: ActorSystem = ActorSystem("basicExample")
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val ec: ExecutionContextExecutor = system.dispatcher
-    val source = Source(1 to 100)
 
     val evenFlow = Flow[Int].filter(_ % 2 == 0)
 
