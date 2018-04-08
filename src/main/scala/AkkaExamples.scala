@@ -12,6 +12,9 @@ object AkkaExamples {
   // Sources emit. They are blueprints of what you want to run. They can be reused
   val source: Source[Int, NotUsed] = Source(1 to 100)
 
+  //Sinks receive data from a source and can be reused
+  def fileSink(filename: String): Sink[ByteString, Future[IOResult]] = FileIO.toPath(Paths.get(filename))
+
   def basicExample(): Unit = {
     implicit val system: ActorSystem = ActorSystem("basicExample")
     implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -31,7 +34,7 @@ object AkkaExamples {
     // Nothing is computed at this point it describes what will be computed when the source is used
     val factorials: Source[BigInt, NotUsed] = source.scan(BigInt(1))((acc, next) ⇒ acc * next)
     // This is a data receiver
-    val sink: Sink[ByteString, Future[IOResult]] = FileIO.toPath(Paths.get("factorials.txt"))
+    val sink: Sink[ByteString, Future[IOResult]] = fileSink("factorials.txt")
     val result: Future[IOResult] =
       factorials
         .map(num ⇒ ByteString(s"$num\n"))
@@ -63,12 +66,18 @@ object AkkaExamples {
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-    val result = tweets
+    val hashtags: Source[String, NotUsed] = tweets
       .map(_.hashtags) // Get all sets of hashtags ...
       .reduce(_ ++ _) // ... and reduce them to a single set, removing duplicates across all tweets
       .mapConcat(identity) // Flatten the stream of tweets to a stream of hashtags
       .map(_.name.toUpperCase) // Convert all hashtags to upper case
-      .runWith(Sink.foreach(println)) // Attach the Flow to a Sink that will finally print the hashtags
+
+    val result = for {
+      _ <- hashtags.runWith(Sink.foreach(println)) // Attach the Flow to a Sink that will print the hashtags
+      _ <- hashtags
+        .map(hashtag ⇒ ByteString(s"$hashtag\n"))
+        .runWith(fileSink("hashtags.txt"))
+    } yield ()
 
     result.onComplete(_ ⇒ system.terminate())
   }
