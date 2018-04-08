@@ -2,10 +2,13 @@
 object Main {
 
   def main(args: Array[String]): Unit = {
-//    AkkaExamples.factorials()
-//    AkkaExamples.tweets()
-//    AkkaExamples.throttle()
-    BasicAkkaExamples.throttledFactorial()
+//    BasicAkkaExamples.factorials()
+//    TwitterAkkaExamples.tweets()
+//    BasicAkkaExamples.throttle()
+//    BasicAkkaExamples.throttledFactorial()
+//    TwitterAkkaExamples.getTweetAuthors()
+//    TwitterAkkaExamples.tweetGraph()
+    TwitterAkkaExamples.tweetCounter()
   }
 
 }
