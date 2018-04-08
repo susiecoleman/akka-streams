@@ -33,6 +33,11 @@ def lineSink(filename: String): Sink[String, Future[IOResult]] =
 
 `runWith()` is a convenience method that automatically ignores the materialized value of any other stages except those appended by the `runWith()`
 
+## Guides I'm reading
+* [Streams quickstart guide](https://doc.akka.io/docs/akka/2.5.5/scala/stream/stream-quickstart.html)
+* [Introduction to Akka Streams](https://opencredo.com/introduction-to-akka-streams-getting-started/)
+* [Twitter Client](https://github.com/DanielaSfregola/twitter4s)
+
 ## Questions for next time
 - A better way to deal with futures in the tweet function
 - Keep left and keep right? materialized types and not used for Source
