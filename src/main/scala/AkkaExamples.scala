@@ -28,11 +28,14 @@ object AkkaExamples {
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-    val factorials = source.scan(BigInt(1))((acc, next) ⇒ acc * next)
+    // Nothing is computed at this point it describes what will be computed when the source is used
+    val factorials: Source[BigInt, NotUsed] = source.scan(BigInt(1))((acc, next) ⇒ acc * next)
+    // This is a data receiver
+    val sink: Sink[ByteString, Future[IOResult]] = FileIO.toPath(Paths.get("factorials.txt"))
     val result: Future[IOResult] =
       factorials
         .map(num ⇒ ByteString(s"$num\n"))
-        .runWith(FileIO.toPath(Paths.get("factorials.txt"))) // runWith is passed a Sink which is where a stream terminates
+        .runWith(sink) // runWith is passed a Sink which is where a stream terminates
 
     result.map(x => println(x.count))
 
