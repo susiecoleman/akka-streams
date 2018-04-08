@@ -8,7 +8,8 @@ object Main {
 //    BasicAkkaExamples.throttledFactorial()
 //    TwitterAkkaExamples.getTweetAuthors()
 //    TwitterAkkaExamples.tweetGraph()
-    TwitterAkkaExamples.tweetCounter()
+//    TwitterAkkaExamples.tweetCounter()
+    ExternalStream.stream
   }
 
 }
