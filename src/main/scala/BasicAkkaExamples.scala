@@ -7,13 +7,20 @@ import scala.concurrent._
 import java.nio.file.Paths
 import scala.concurrent.duration._
 
-object AkkaExamples {
+// Based on examples in the akka streams quickstart guide https://doc.akka.io/docs/akka/current/stream/stream-quickstart.html
+
+object BasicAkkaExamples {
 
   // Sources emit. They are blueprints of what you want to run. They can be reused
   val source: Source[Int, NotUsed] = Source(1 to 100)
 
   //Sinks receive data from a source and can be reused
   def fileSink(filename: String): Sink[ByteString, Future[IOResult]] = FileIO.toPath(Paths.get(filename))
+
+  def lineSink(filename: String): Sink[String, Future[IOResult]] =
+    Flow[String]
+      .map(s ⇒ ByteString(s + "\n"))
+      .toMat(fileSink(filename))(Keep.right)
 
   def basicExample(): Unit = {
     implicit val system: ActorSystem = ActorSystem("basicExample")
@@ -27,7 +34,7 @@ object AkkaExamples {
 
   def factorials(): Unit = {
 
-    implicit val system: ActorSystem = ActorSystem("basicExample")
+    implicit val system: ActorSystem = ActorSystem("factorials")
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
@@ -74,25 +81,32 @@ object AkkaExamples {
 
     val result = for {
       _ <- hashtags.runWith(Sink.foreach(println)) // Attach the Flow to a Sink that will print the hashtags
-      _ <- hashtags
-        .map(hashtag ⇒ ByteString(s"$hashtag\n"))
-        .runWith(fileSink("hashtags.txt"))
+      _ <- hashtags.runWith(lineSink("hashtags.txt"))
     } yield ()
 
     result.onComplete(_ ⇒ system.terminate())
   }
 
-  def flows = {
-    val flow = Flow[Int].map(_*2)
-    val sink = flow.to(Sink.foreach(println))
-  }
-
   def throttle(): Unit = {
-    implicit val system: ActorSystem = ActorSystem("basicExample")
+    implicit val system: ActorSystem = ActorSystem("throttle")
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
     val result: Future[Done] = source.throttle(1, 1.second, 1, ThrottleMode.Shaping).runForeach(println)
+
+    result.onComplete(_ ⇒ system.terminate())
+  }
+
+  def throttledFactorial() = {
+    implicit val system: ActorSystem = ActorSystem("throttled-factorials")
+    implicit val materializer: ActorMaterializer = ActorMaterializer()
+    implicit val ec: ExecutionContextExecutor = system.dispatcher
+
+    val factorials: Source[BigInt, NotUsed] = source.scan(BigInt(1))((acc, next) ⇒ acc * next)
+    val result = factorials
+      .zipWith(Source(1 to 100))((num, idx) ⇒ s"$idx! = $num")
+      .throttle(1, 1.second, 1, ThrottleMode.shaping)
+      .runForeach(println)
 
     result.onComplete(_ ⇒ system.terminate())
   }

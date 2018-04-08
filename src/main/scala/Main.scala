@@ -2,7 +2,10 @@
 object Main {
 
   def main(args: Array[String]): Unit = {
-    AkkaExamples.basicExample()
+//    AkkaExamples.factorials()
+//    AkkaExamples.tweets()
+//    AkkaExamples.throttle()
+    BasicAkkaExamples.throttledFactorial()
   }
 
 }
