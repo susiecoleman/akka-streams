@@ -1,14 +1,20 @@
 import BasicAkkaExamples.lineSink
-import akka.stream.{ActorMaterializer, ClosedShape}
+import akka.stream.{ActorMaterializer, ClosedShape, IOResult}
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Keep, RunnableGraph, Sink, Source}
 import akka.{Done, NotUsed}
 import akka.actor.ActorSystem
+import cats.syntax.semigroupal._
+import cats.implicits._
+import cats._
+import cats.data._
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object TwitterAkkaExamples {
 
   val akkaTag = Hashtag("#akka")
+
+
 
 
   def tweetCounter() = {
@@ -130,12 +136,20 @@ object TwitterAkkaExamples {
       .mapConcat(identity) // Flatten the stream of tweets to a stream of hashtags
       .map(_.name.toUpperCase) // Convert all hashtags to upper case
 
+
+    val printing = hashtags.runWith(Sink.foreach(println)) // Attach the Flow to a Sink that will print the hashtags
+    val filesave = hashtags.runWith(lineSink("hashtags.txt"))
+
+    case class Results(printing: Done, file: IOResult, printing2: Done)
+
+    val res: Future[Results] = (printing, filesave, printing).mapN(Results.apply)
+
     val result = for {
-      _ <- hashtags.runWith(Sink.foreach(println)) // Attach the Flow to a Sink that will print the hashtags
-      _ <- hashtags.runWith(lineSink("hashtags.txt"))
+      _ <- printing
+      _ <- filesave
     } yield ()
 
-    result.onComplete(_ ⇒ system.terminate())
+    res.onComplete(_ ⇒ system.terminate())
   }
 }
 
