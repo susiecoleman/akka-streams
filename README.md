@@ -39,6 +39,5 @@ def lineSink(filename: String): Sink[String, Future[IOResult]] =
 * [Twitter Client](https://github.com/DanielaSfregola/twitter4s)
 
 ## Questions for next time
-- A better way to deal with futures in the tweet function
 - Keep left and keep right? materialized types and not used for Source
 - Tweet counter why foreach?

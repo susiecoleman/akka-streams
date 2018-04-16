@@ -14,8 +14,18 @@ object TwitterAkkaExamples {
 
   val akkaTag = Hashtag("#akka")
 
-
-
+  val tweetSource: Source[TweetExample, NotUsed] = Source(
+    TweetExample(Author("rolandkuhn"), System.currentTimeMillis, "#akka rocks!") ::
+      TweetExample(Author("patriknw"), System.currentTimeMillis, "#akka !") ::
+      TweetExample(Author("bantonsson"), System.currentTimeMillis, "#akka !") ::
+      TweetExample(Author("drewhk"), System.currentTimeMillis, "#akka !") ::
+      TweetExample(Author("ktosopl"), System.currentTimeMillis, "#akka on the rocks!") ::
+      TweetExample(Author("mmartynas"), System.currentTimeMillis, "wow #akka !") ::
+      TweetExample(Author("akkateam"), System.currentTimeMillis, "#akka rocks!") ::
+      TweetExample(Author("bananaman"), System.currentTimeMillis, "#bananas rock!") ::
+      TweetExample(Author("appleman"), System.currentTimeMillis, "#apples rock!") ::
+      TweetExample(Author("drama"), System.currentTimeMillis, "we compared #apples to #oranges!") ::
+      Nil)
 
   def tweetCounter() = {
 
@@ -23,25 +33,12 @@ object TwitterAkkaExamples {
     implicit val materializer = ActorMaterializer()
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-    val tweets: Source[ATweet, NotUsed] = Source(
-      ATweet(Author("rolandkuhn"), System.currentTimeMillis, "#akka rocks!") ::
-        ATweet(Author("patriknw"), System.currentTimeMillis, "#akka !") ::
-        ATweet(Author("bantonsson"), System.currentTimeMillis, "#akka !") ::
-        ATweet(Author("drewhk"), System.currentTimeMillis, "#akka !") ::
-        ATweet(Author("ktosopl"), System.currentTimeMillis, "#akka on the rocks!") ::
-        ATweet(Author("mmartynas"), System.currentTimeMillis, "wow #akka !") ::
-        ATweet(Author("akkateam"), System.currentTimeMillis, "#akka rocks!") ::
-        ATweet(Author("bananaman"), System.currentTimeMillis, "#bananas rock!") ::
-        ATweet(Author("appleman"), System.currentTimeMillis, "#apples rock!") ::
-        ATweet(Author("drama"), System.currentTimeMillis, "we compared #apples to #oranges!") ::
-        Nil)
-
-    val count: Flow[ATweet, Int, NotUsed] = Flow[ATweet].map(_ ⇒ 1)
+    val count: Flow[TweetExample, Int, NotUsed] = Flow[TweetExample].map(_ ⇒ 1)
 
     val sumSink: Sink[Int, Future[Int]] = Sink.fold[Int, Int](0)(_ + _)
 
     val counterGraph: RunnableGraph[Future[Int]] =
-      tweets
+      tweetSource
         .via(count)
         .toMat(sumSink)(Keep.right)
 
@@ -57,28 +54,15 @@ object TwitterAkkaExamples {
     implicit val materializer = ActorMaterializer()
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-    val tweets: Source[ATweet, NotUsed] = Source(
-      ATweet(Author("rolandkuhn"), System.currentTimeMillis, "#akka rocks!") ::
-        ATweet(Author("patriknw"), System.currentTimeMillis, "#akka !") ::
-        ATweet(Author("bantonsson"), System.currentTimeMillis, "#akka !") ::
-        ATweet(Author("drewhk"), System.currentTimeMillis, "#akka !") ::
-        ATweet(Author("ktosopl"), System.currentTimeMillis, "#akka on the rocks!") ::
-        ATweet(Author("mmartynas"), System.currentTimeMillis, "wow #akka !") ::
-        ATweet(Author("akkateam"), System.currentTimeMillis, "#akka rocks!") ::
-        ATweet(Author("bananaman"), System.currentTimeMillis, "#bananas rock!") ::
-        ATweet(Author("appleman"), System.currentTimeMillis, "#apples rock!") ::
-        ATweet(Author("drama"), System.currentTimeMillis, "we compared #apples to #oranges!") ::
-        Nil)
-
     val writeAuthors = Sink.foreach[Author](println)
     val writeHashtags = Sink.foreach[Hashtag](println)
     val g = RunnableGraph.fromGraph(GraphDSL.create() { implicit b =>
       import GraphDSL.Implicits._
 
-      val bcast = b.add(Broadcast[ATweet](2))
-      tweets ~> bcast.in
-      bcast.out(0) ~> Flow[ATweet].map(_.author) ~> writeAuthors
-      bcast.out(1) ~> Flow[ATweet].mapConcat(_.hashtags.toList) ~> writeHashtags
+      val bcast = b.add(Broadcast[TweetExample](2))
+      tweetSource ~> bcast.in
+      bcast.out(0) ~> Flow[TweetExample].map(_.author) ~> writeAuthors
+      bcast.out(1) ~> Flow[TweetExample].mapConcat(_.hashtags.toList) ~> writeHashtags
       ClosedShape
     })
     g.run()
@@ -89,21 +73,8 @@ object TwitterAkkaExamples {
     implicit val materializer = ActorMaterializer()
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-    val tweets: Source[ATweet, NotUsed] = Source(
-      ATweet(Author("rolandkuhn"), System.currentTimeMillis, "#akka rocks!") ::
-        ATweet(Author("patriknw"), System.currentTimeMillis, "#akka !") ::
-        ATweet(Author("bantonsson"), System.currentTimeMillis, "#akka !") ::
-        ATweet(Author("drewhk"), System.currentTimeMillis, "#akka !") ::
-        ATweet(Author("ktosopl"), System.currentTimeMillis, "#akka on the rocks!") ::
-        ATweet(Author("mmartynas"), System.currentTimeMillis, "wow #akka !") ::
-        ATweet(Author("akkateam"), System.currentTimeMillis, "#akka rocks!") ::
-        ATweet(Author("bananaman"), System.currentTimeMillis, "#bananas rock!") ::
-        ATweet(Author("appleman"), System.currentTimeMillis, "#apples rock!") ::
-        ATweet(Author("drama"), System.currentTimeMillis, "we compared #apples to #oranges!") ::
-        Nil)
-
     val authors: Source[Author, NotUsed] =
-      tweets
+      tweetSource
         .filter(_.hashtags.contains(akkaTag))
         .map(_.author)
 
@@ -117,20 +88,7 @@ object TwitterAkkaExamples {
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-    val tweets: Source[ATweet, NotUsed] = Source(
-      ATweet(Author("rolandkuhn"), System.currentTimeMillis, "#akka rocks!") ::
-        ATweet(Author("patriknw"), System.currentTimeMillis, "#akka !") ::
-        ATweet(Author("bantonsson"), System.currentTimeMillis, "#akka !") ::
-        ATweet(Author("drewhk"), System.currentTimeMillis, "#akka !") ::
-        ATweet(Author("ktosopl"), System.currentTimeMillis, "#akka on the rocks!") ::
-        ATweet(Author("mmartynas"), System.currentTimeMillis, "wow #akka !") ::
-        ATweet(Author("akkateam"), System.currentTimeMillis, "#akka rocks!") ::
-        ATweet(Author("bananaman"), System.currentTimeMillis, "#bananas rock!") ::
-        ATweet(Author("appleman"), System.currentTimeMillis, "#apples rock!") ::
-        ATweet(Author("drama"), System.currentTimeMillis, "we compared #apples to #oranges!") ::
-        Nil)
-
-    val hashtags: Source[String, NotUsed] = tweets
+    val hashtags: Source[String, NotUsed] = tweetSource
       .map(_.hashtags) // Get all sets of hashtags ...
       .reduce(_ ++ _) // ... and reduce them to a single set, removing duplicates across all tweets
       .mapConcat(identity) // Flatten the stream of tweets to a stream of hashtags
@@ -140,10 +98,10 @@ object TwitterAkkaExamples {
     val printing = hashtags.runWith(Sink.foreach(println)) // Attach the Flow to a Sink that will print the hashtags
     val filesave = hashtags.runWith(lineSink("hashtags.txt"))
 
-    case class Results(printing: Done, file: IOResult, printing2: Done)
-
+    //Using applicative from cats library to resolve multiple futures in to a single future. Using this so that the futures are not dependant on each other and run in parallel.
     val res: Future[Results] = (printing, filesave, printing).mapN(Results.apply)
 
+    //Using a for comprehension assumes that the previous futures are dependant on each other. Applicative is preferable for performance
     val result = for {
       _ <- printing
       _ <- filesave
@@ -157,8 +115,10 @@ final case class Author(handle: String)
 
 final case class Hashtag(name: String)
 
-final case class ATweet(author: Author, timestamp: Long, body: String) {
+final case class TweetExample(author: Author, timestamp: Long, body: String) {
   def hashtags: Set[Hashtag] = body.split(" ").collect {
     case t if t.startsWith("#") ⇒ Hashtag(t.replaceAll("[^#\\w]", ""))
   }.toSet
 }
+
+case class Results(printing: Done, file: IOResult, printing2: Done)
