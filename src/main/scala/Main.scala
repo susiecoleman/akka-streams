@@ -9,7 +9,8 @@ object Main {
 //    TwitterAkkaExamples.getTweetAuthors()
 //    TwitterAkkaExamples.tweetGraph()
 //    TwitterAkkaExamples.tweetCounter()
-    ExternalStream.stream
+//    ExternalStream.stream
+    ExternalStream.printTweets()
   }
 
 }
